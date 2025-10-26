@@ -1,70 +1,16 @@
-# Fitgirl-Easy-Downloader
-This Tool Helps To Download Multiple Files Easily From fitgirl-repacks.site Through fuckingfast.co
 
-## Prerequisites
-Ensure you have the following installed before running the script :
-- Python 3.8+
-- Required Python packages :
-  - `requests`
-  - `beautifulsoup4`
-  - `tqdm`
-  - `colorama`
+This project is a **Graphical User Interface fork** of the original [Fitgirl-Easy-Downloader](https://github.com/JOY6IX9INE/Fucking-Fast-Multi-Downloader) tool.
 
+The core functionality remains the same: it helps to download multiple files easily from **fitgirl-repacks.site** by processing the links through **fuckingfast.co**. The major change is the replacement of the Command Line Interface (CLI) with a **minimalist, dark mode GUI** built using Tkinter for better usability and real-time monitoring.
 
-## Usage
-1. **Prepare Input Links** : Add your URLs to `input.txt`, one per line.
-2. **Run the Script** :
-   ```bash
-   python main.py
-   ```
-3. The script will :
-   - Process each link in `input.txt`.
-   - Extract and download files to the `downloads` folder.
-   - Remove processed links from `input.txt`.
+---
 
-## Extra  
+## New GUI Features 
 
-To extract and copy all direct download links, follow these steps:  
+* **Real-time Progress:** A dedicated progress bar displays the download **percentage** and **speed (MB/s)** for the currently active file.
+* **Download Folder Selection:** A built-in **`Browse`** button allows you to easily select and change the download directory.
+* **Link Management:** The input links are edited and saved directly within the application. The **`Save`** button manages the `input.txt` file content and is disabled when no changes are made.
+* **Non-Blocking UI:** Utilizes multi-threading to ensure the GUI remains responsive while scraping and downloading files in the background.
+* *(The need for `tqdm` and `colorama` is eliminated in the GUI version.)*
 
-1. Open the page where you want to grab the links.  
-2. Open the **browser console**:  
-   - **Windows/Linux:** Press `F12` or `Ctrl + Shift + I`, then go to the **Console** tab.  
-   - **Mac:** Press `Cmd + Option + I`, then go to the **Console** tab.  
-3. Paste the script below into the console and press **Enter**.  
-4. All matching links will be displayed and automatically copied to your clipboard!  
-
-````js
-(() => {
-    const links = Array.from(document.querySelectorAll('a'))
-        .map(a => a.href)
-        .filter(url => url.startsWith('https://fuckingfast.co/'));
-
-    if (links.length === 0) {
-        console.log("❌ No Matching URLs Found");
-        return;
-    }
-
-    console.clear();
-    console.log("🔗 Matching URLs :\n");
-    console.log(links.join("\n"));
-
-    const textarea = document.createElement('textarea');
-    textarea.value = links.join("\n");
-    document.body.appendChild(textarea);
-    textarea.select();
-
-    try {
-        document.execCommand('copy');
-        console.log("\n✅ All Links Copied To Clipboard!");
-    } catch (err) {
-        console.error("❌ Failed To Copy :", err);
-    }
-
-    document.body.removeChild(textarea); 
-})();
-````  
-
-# Disclaimer
-This tool is created for educational purposes and ethical use only. Any misuse of this tool for malicious purposes is not condoned. The developers of this tool are not responsible for any illegal or unethical activities carried out using this tool.
-
-[![Star History Chart](https://api.star-history.com/svg?repos=JOY6IX9INE/Fucking-Fast-Multi-Downloader&type=Date)](https://star-history.t9t.io/#JOY6IX9INE/Fucking-Fast-Multi-Downloader&Date)
+---
