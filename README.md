@@ -11,6 +11,7 @@ The core functionality remains the same: it helps to download multiple files eas
 * **Download Folder Selection:** A built-in **`Browse`** button allows you to easily select and change the download directory.
 * **Link Management:** The input links are edited and saved directly within the application. The **`Save`** button manages the `input.txt` file content and is disabled when no changes are made.
 * **Non-Blocking UI:** Utilizes multi-threading to ensure the GUI remains responsive while scraping and downloading files in the background.
+* **Download management:** A built-in stop and skip download feature.
 * *(The need for `tqdm` and `colorama` is eliminated in the GUI version.)*
 
 ---
