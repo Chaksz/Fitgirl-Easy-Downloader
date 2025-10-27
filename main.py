@@ -20,6 +20,8 @@ class DownloaderApp:
         self.download_path_var = tk.StringVar(value=os.path.join(os.getcwd(), "Downloads"))
         self.links_changed = tk.BooleanVar(value=False)
         self.is_running = False
+        self.should_stop = False 
+        self.should_skip = False 
         self.progress_text_var = tk.StringVar(value="0.00%") # Untuk persentase
         self.speed_text_var = tk.StringVar(value="Speed: N/A") # Untuk kecepatan
 
@@ -36,7 +38,9 @@ class DownloaderApp:
             'error': '#F44336',
             'info': '#2196F3',
             'warning': '#FFC107',
-            'done': '#9C27B0'
+            'done': '#9C27B0',
+            'stop': '#F44336',
+            'skip': '#FFC107'
         }
         
         self.root.configure(bg=self.colors['bg'])
@@ -58,7 +62,7 @@ class DownloaderApp:
     def setup_style(self):
         """Mengkonfigurasi style ttk untuk dark mode."""
         style = ttk.Style()
-        style.theme_use('clam')  # 'clam' adalah tema yang bagus untuk dikustomisasi
+        style.theme_use('clam') 
 
         # Style umum
         style.configure('.',
@@ -78,6 +82,16 @@ class DownloaderApp:
         style.map('TButton',
                   background=[('active', self.colors['accent']),
                               ('disabled', '#555555')],
+                  foreground=[('disabled', '#999999')])
+                  
+        # Style Tombol Baru untuk Stop/Skip
+        style.configure('Stop.TButton', background=self.colors['stop'], foreground=self.colors['button_fg'])
+        style.map('Stop.TButton',
+                  background=[('active', '#D32F2F'), ('disabled', '#555555')])
+                  
+        style.configure('Skip.TButton', background=self.colors['skip'], foreground=self.colors['bg'])
+        style.map('Skip.TButton',
+                  background=[('active', '#FFA000'), ('disabled', '#555555')],
                   foreground=[('disabled', '#999999')])
 
         # Style Entry (untuk path)
@@ -128,14 +142,14 @@ class DownloaderApp:
         text_button_frame.pack(fill='both', expand=True)
 
         self.link_text = scrolledtext.ScrolledText(text_button_frame,
-                                                  height=10,
-                                                  wrap=tk.WORD,
-                                                  bg=self.colors['input_bg'],
-                                                  fg=self.colors['fg'],
-                                                  insertbackground=self.colors['fg'],
-                                                  font=('Consolas', 10),
-                                                  border=0,
-                                                  relief='solid')
+                                                 height=10,
+                                                 wrap=tk.WORD,
+                                                 bg=self.colors['input_bg'],
+                                                 fg=self.colors['fg'],
+                                                 insertbackground=self.colors['fg'],
+                                                 font=('Consolas', 10),
+                                                 border=0,
+                                                 relief='solid')
         self.link_text.pack(side='left', fill='both', expand=True)
 
         self.save_button = ttk.Button(text_button_frame, text="Save", command=self.save_links, state='disabled')
@@ -145,8 +159,15 @@ class DownloaderApp:
         control_frame = ttk.Frame(main_frame)
         control_frame.pack(fill='x', pady=10)
 
+        # Tombol Start/Stop/Skip
         self.start_button = ttk.Button(control_frame, text="Start Downloads", command=self.start_download_thread)
-        self.start_button.pack(fill='x')
+        self.start_button.pack(side='left', fill='x', expand=True)
+        
+        self.skip_button = ttk.Button(control_frame, text="Skip Current", command=self.skip_current_download, style='Skip.TButton', state='disabled')
+        self.skip_button.pack(side='left', fill='x', expand=True, padx=(10, 10))
+        
+        self.stop_button = ttk.Button(control_frame, text="Stop All", command=self.stop_all_downloads, style='Stop.TButton', state='disabled')
+        self.stop_button.pack(side='left', fill='x', expand=True)
 
         # --- 4. Progress Bar & Info ---
         progress_info_frame = ttk.Frame(main_frame)
@@ -171,13 +192,13 @@ class DownloaderApp:
         ttk.Label(log_frame, text="Status Log:").pack(anchor='w')
         
         self.log_text = scrolledtext.ScrolledText(log_frame,
-                                                  wrap=tk.WORD,
-                                                  state='disabled',
-                                                  bg=self.colors['input_bg'],
-                                                  fg=self.colors['fg'],
-                                                  font=('Consolas', 9),
-                                                  border=0,
-                                                  relief='solid')
+                                                 wrap=tk.WORD,
+                                                 state='disabled',
+                                                 bg=self.colors['input_bg'],
+                                                 fg=self.colors['fg'],
+                                                 font=('Consolas', 9),
+                                                 border=0,
+                                                 relief='solid')
         self.log_text.pack(fill='both', expand=True)
 
     # --- Fungsi Callback Widget ---
@@ -214,7 +235,7 @@ class DownloaderApp:
     def save_links(self):
         """Menyimpan konten text box ke input.txt."""
         try:
-            links = self.link_text.get('1.0', 'end-1c')  # 'end-1c' untuk menghindari newline ekstra
+            links = self.link_text.get('1.0', 'end-1c') 
             with open('input.txt', 'w') as f:
                 f.write(links)
             self.log.done("Links saved to", 'input.txt')
@@ -223,17 +244,77 @@ class DownloaderApp:
         except Exception as e:
             self.log.error("Failed to save input.txt", str(e))
 
+    def skip_current_download(self):
+        """Mengatur flag untuk melewati download saat ini."""
+        if self.is_running:
+            self.should_skip = True
+            self.log.warning("Skip requested.", "Moving to next link...")
+            self.skip_button.config(state='disabled') 
+
+    def stop_all_downloads(self):
+        """Mengatur flag untuk menghentikan semua proses download."""
+        if self.is_running:
+            self.should_stop = True
+            self.log.error("Stop requested.", "Stopping all downloads...")
+            self.stop_button.config(state='disabled')
+    
     def set_controls_state(self, state):
         """Mengaktifkan/menonaktifkan tombol selama proses download."""
         self.start_button.config(state=state)
         self.browse_button.config(state=state)
+        
+        # Mengelola tombol Stop/Skip
         if state == 'disabled':
             self.is_running = True
+            self.should_stop = False # Reset flag stop saat start
+            self.should_skip = False # Reset flag skip saat start
+            self.stop_button.config(state='normal')
+            self.skip_button.config(state='normal')
             self.save_button.config(state='disabled')
         else:
             self.is_running = False
+            self.stop_button.config(state='disabled')
+            self.skip_button.config(state='disabled')
             if self.links_changed.get():
                 self.save_button.config(state='normal')
+
+    # >> FUNGSI BARU: Menghapus Link dari GUI dan File <<
+    def remove_link_from_gui_and_file(self, processed_link):
+        """Menghapus tautan yang berhasil diunduh dari GUI dan input.txt.
+           Ini dipanggil dari thread download, sehingga pemrosesan file aman.
+           Pembaruan GUI dijadwalkan ke main thread.
+        """
+        input_file = 'input.txt'
+        try:
+            # 1. Update input.txt (Dilakukan di thread kerja)
+            with open(input_file, 'r') as file:
+                links = file.readlines()
+                
+            # Filter tautan yang berhasil diunduh
+            remaining_links = [line for line in links if line.strip() != processed_link.strip()]
+            
+            with open(input_file, 'w') as file:
+                file.writelines(remaining_links)
+                
+            # Hitung tautan non-kosong yang tersisa
+            remaining_count = len([link for link in remaining_links if link.strip()])
+
+            self.log.done("Link Removed From input.txt", f"Remaining links: {remaining_count}")
+            
+            # 2. Update GUI Text Box (Dijadwalkan di main thread)
+            def update_gui_text():
+                self.link_text.config(state='normal')
+                self.link_text.delete('1.0', 'end')
+                # Masukkan kembali tautan yang tersisa
+                self.link_text.insert('1.0', "".join(remaining_links))
+                self.link_text.config(state='normal') 
+                self.on_links_changed() # Reset status save button
+                
+            self.root.after(0, update_gui_text)
+
+        except Exception as e:
+            self.log.error(f"Failed to remove link {processed_link} from file/GUI", str(e))
+    # ----------------------------------------------------
 
     # --- Logika Download (di-thread) ---
 
@@ -247,10 +328,10 @@ class DownloaderApp:
         download_thread = threading.Thread(target=self.run_download_loop, daemon=True)
         download_thread.start()
 
-    def run_download_loop(self):
+    def run_download_loop(self,):
         """Loop utama yang memproses setiap link. (Berjalan di thread)"""
         
-        # Ambil link dari text box
+        # Ambil link dari text box (Ini adalah daftar statis untuk sesi ini)
         links_raw = self.link_text.get('1.0', 'end-1c')
         links = [line.strip() for line in links_raw.splitlines() if line.strip()]
 
@@ -268,24 +349,31 @@ class DownloaderApp:
         }
         
         downloads_folder = self.download_path_var.get()
-
+        
+        # --- di run_download_loop (ganti bagian for link in links) ---
         for link in links:
-            if not self.is_running:
+            # Cek status Stop
+            if self.should_stop:
+                self.log.error("Global stop received.", "Stopping link processing.")
                 break
-                
-            self.log.info(f"Processing", link) # Link TIDAK dipotong
-            self.root.after(0, self.update_progress, 0, "0.00%", "Speed: N/A") # Reset progress bar
+
+            # Kalau skip ditekan, jangan reset di sini!
+            if self.should_skip:
+                self.log.warning("Skipping link", link)
+                continue  # lanjut ke link berikutnya
             
+            self.root.after(0, self.skip_button.config, {'state': 'normal'}) 
+            self.log.info("Processing", link)
+            self.root.after(0, self.update_progress, 0, "0.00%", "Speed: N/A")
+
             try:
                 response = requests.get(link, headers=headers, timeout=10)
                 if response.status_code != 200:
-                    self.log.error(f"Failed to fetch page", f"{link} (Status: {response.status_code})")
+                    self.log.error("Failed to fetch page", f"{link} (Status: {response.status_code})")
                     continue
 
                 soup = BeautifulSoup(response.text, 'html.parser')
                 meta_title = soup.find('meta', attrs={'name': 'title'})
-                
-                # Membersihkan nama file dari karakter ilegal
                 file_name_raw = meta_title['content'] if meta_title else "default_file_name"
                 file_name = re.sub(r'[<>:"/\\|?*]', '_', file_name_raw)
 
@@ -300,27 +388,30 @@ class DownloaderApp:
                     match = re.search(r'window\.open\(["\'](https?://[^\s"\'\)]+)', download_function)
                     if match:
                         download_url = match.group(1)
-                        self.log.info(f"Found URL", f"{download_url[:50]}...") # URL TIDAK dipotong
+                        self.log.info("Found URL", f"{download_url[:50]}...")
                         output_path = os.path.join(downloads_folder, file_name)
-                        
-                        # Memulai download file
-                        self.download_file(download_url, output_path, file_name_raw)
-                        
+                        self.download_file(download_url, output_path, file_name_raw, link)
                     else:
-                        self.log.error("No download URL found in function", link)
+                        self.log.error("No download URL found", link)
                 else:
                     self.log.error("Download function not found", link)
 
             except Exception as e:
                 self.log.error(f"Failed processing link {link}", str(e))
                 continue
-        
-        self.log.done("All download tasks finished.", "")
+
+        # Penanganan Akhir Loop Download
+        if self.should_stop:
+            self.log.done("Download process cancelled by user.", "")
+        else:
+            self.log.done("All download tasks finished.", "")
+            
         self.root.after(0, self.update_progress, 0, "0.00%", "Speed: N/A") # Reset tampilan progress
         self.root.after(0, self.set_controls_state, 'normal') # Aktifkan kembali tombol
 
-    def download_file(self, download_url, output_path, file_name_raw):
-        """Mendownload file sambil memperbarui progress bar, persentase, dan kecepatan."""
+    # >> FUNGSI DOWNLOAD DIMODIFIKASI untuk memanggil penghapusan link <<
+    def download_file(self, download_url, output_path, file_name_raw, link_to_remove):
+        """Mendownload file, memperbarui progress bar, dan menghapus link jika sukses."""
         try:
             start_time = time.time()
             response = requests.get(download_url, stream=True, timeout=30)
@@ -328,7 +419,6 @@ class DownloaderApp:
             
             total_size = int(response.headers.get('content-length', 0))
             
-            # Konversi Total Size ke satuan yang mudah dibaca
             total_size_human = self.format_size(total_size)
             self.log.info(f"Downloading {file_name_raw} ({total_size_human})", f"{download_url[:0]}...")
 
@@ -339,8 +429,9 @@ class DownloaderApp:
 
             with open(output_path, 'wb') as f:
                 for data in response.iter_content(block_size):
-                    if not self.is_running: # Cek jika ada permintaan berhenti
-                        raise StopIteration("Download cancelled by user.")
+                    # Cek Status Stop/Skip
+                    if self.should_stop or self.should_skip: 
+                        raise StopIteration("Download cancelled.") 
 
                     f.write(data)
                     downloaded_size += len(data)
@@ -363,6 +454,10 @@ class DownloaderApp:
                         last_time = current_time
                         last_downloaded = downloaded_size
             
+            # JIKA SUKSES: Panggil fungsi penghapusan link
+            self.remove_link_from_gui_and_file(link_to_remove)
+            
+            # Final logging
             end_time = time.time()
             total_duration = end_time - start_time
             avg_speed_bps = downloaded_size / total_duration if total_duration > 0 else 0
@@ -372,13 +467,32 @@ class DownloaderApp:
             self.root.after(0, self.update_progress, 100, "100.00%", f"Done! ({avg_speed_human})")
             
         except requests.exceptions.RequestException as e:
-            self.log.error(f"Download failed for {output_path}", str(e))
+            self.log.error(f"Download failed for {file_name_raw}", str(e))
             self.root.after(0, self.update_progress, 0, "0.00%", "Speed: N/A")
+            if os.path.exists(output_path):
+                 try:
+                    os.remove(output_path)
+                    self.log.info("Removed partial file", output_path)
+                 except Exception:
+                    self.log.warning("Could not remove partial file", output_path)
         except StopIteration:
-            self.log.warning("Download cancelled.", f"Stopped: {file_name_raw}")
+            if os.path.exists(output_path):
+                try:
+                    os.remove(output_path)
+                    self.log.info("Removed partial file", output_path)
+                except Exception:
+                    self.log.warning("Could not remove partial file", output_path)
+            
+            if self.should_stop:
+                self.log.error("Download stopped by user.", f"Cancelled: {file_name_raw}")
+            elif self.should_skip:
+                self.log.warning("Download skipped by user.", f"Skipped: {file_name_raw}. Moving to next link...")
+                self.should_skip = False  # reset di sini, bukan di run_download_loop
+
         except Exception as e:
-            self.log.error(f"Error writing file {output_path}", str(e))
+            self.log.error(f"Error writing file {file_name_raw}", str(e))
             self.root.after(0, self.update_progress, 0, "0.00%", "Speed: N/A")
+    # --------------------------------------------------------------------------
 
     # --- Fungsi Utilitas ---
     
@@ -405,7 +519,6 @@ class DownloaderApp:
 
 
 # --- Kelas Logger GUI (Pengganti 'console') ---
-
 class GuiConsole:
     """Kelas untuk logging ke widget Teks Tkinter secara thread-safe."""
     def __init__(self, log_widget, root, colors):
