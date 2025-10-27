@@ -13,7 +13,7 @@ import time
 class DownloaderApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Minimalist Downloader")
+        self.root.title("Fitgirl FuckingFast Downloader")
         self.root.geometry("800x600")
 
         # --- Variabel Status ---
@@ -588,3 +588,4 @@ if __name__ == "__main__":
     main_root = tk.Tk()
     app = DownloaderApp(main_root)
     main_root.mainloop()
+
