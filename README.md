@@ -5,6 +5,12 @@ The core functionality remains the same: it helps to download multiple files eas
 
 ---
 
+## **Direct download the executable [HERE](https://github.com/Chaksz/Fitgirl-Easy-Downloader/releases/download/Executable/Fitgirl.Downloader.exe) <---**
+
+---
+
+<img width="860" height="640" alt="image" src="https://github.com/user-attachments/assets/58d8d439-1c1c-4c4d-ae80-11c4be0d563b" />
+
 ## New GUI Features 
 
 * **Real-time Progress:** A dedicated progress bar displays the download **percentage** and **speed (MB/s)** for the currently active file.
